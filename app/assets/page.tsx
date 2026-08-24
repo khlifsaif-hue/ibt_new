@@ -1,22 +1,25 @@
 "use client";
 
-import { Box, Drill, FileDown, Filter, Plus, Printer, Radiation, Search, X } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, Drill, FileDown, Filter, Plus, Printer, Radiation, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { AssetRecord } from "../lib/demo-data";
 import { exportReport, type ReportFormat } from "../lib/report-export";
+import { useSmartCareAuth } from "../components/auth-provider";
 
 const iconMap = { "FDM 3D Printer": Printer, "CNC Router": Drill, "RF CO₂ Laser Engraver": Radiation };
 
 export default function AssetsPage() {
+  const {user}=useSmartCareAuth();
   const [assets, setAssets] = useState<(AssetRecord&{warningCount?:number})[]>([]);
   const [query, setQuery] = useState("");
+  const [page,setPage]=useState(1);
   const [status, setStatus] = useState("all");
   const [project,setProject]=useState("all"),[location,setLocation]=useState("all"),[warning,setWarning]=useState("all"),[sort,setSort]=useState("status-asc"),[reportFormat,setReportFormat]=useState<ReportFormat>("pdf");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  useEffect(()=>{fetch("/api/assets").then(r=>r.json()).then((d:{assets?:AssetRecord[]})=>{if(d.assets)setAssets(d.assets)}).catch(()=>{})},[]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);const requestedStatus=params.get("status");const requestedWarning=params.get("warning");if(["healthy","due","warning"].includes(requestedStatus||""))setStatus(requestedStatus!);if(["warning","clear"].includes(requestedWarning||""))setWarning(requestedWarning!);fetch("/api/assets?images=0").then(r=>r.json()).then((d:{assets?:AssetRecord[]})=>{if(d.assets)setAssets(d.assets)}).catch(()=>{})},[]);
 
   const filtered = useMemo(() => assets.filter((asset) => {
     const matchesText = `${asset.name} ${asset.id} ${asset.category} ${asset.serialNumber}`.toLowerCase().includes(query.toLowerCase());
@@ -24,6 +27,9 @@ export default function AssetsPage() {
     return matchesText && matchesStatus && (project==="all"||asset.project===project) && (location==="all"||asset.location===location) && (warning==="all"||(warning==="warning"?Number(asset.warningCount||0)>0:Number(asset.warningCount||0)===0));
   }).sort((a,b)=>sort==="status-desc"?b.status.localeCompare(a.status):sort==="health-desc"?b.health-a.health:sort==="health-asc"?a.health-b.health:a.status.localeCompare(b.status)), [assets, query, status,project,location,warning,sort]);
   const projects=useMemo(()=>Array.from(new Set(assets.map(a=>a.project))).sort(),[assets]),locations=useMemo(()=>Array.from(new Set(assets.map(a=>a.location))).sort(),[assets]);
+  const pageSize=15,totalPages=Math.max(1,Math.ceil(filtered.length/pageSize));
+  const visibleAssets=useMemo(()=>filtered.slice((page-1)*pageSize,page*pageSize),[filtered,page]);
+  useEffect(()=>setPage(1),[query,status,project,location,warning,sort]);
 
   async function generateReport(){await exportReport({title:"Asset Registry Report",format:reportFormat,columns:[{key:"id",label:"Asset ID"},{key:"name",label:"Equipment"},{key:"project",label:"Project"},{key:"location",label:"Location"},{key:"status",label:"Status"},{key:"health",label:"Health %"},{key:"warningCount",label:"Warnings"}],rows:filtered as unknown as Record<string,unknown>[],meta:{filters:{Status:status,Project:project,Location:location,Warning:warning,Sort:sort}}})}
 
@@ -32,7 +38,7 @@ export default function AssetsPage() {
     const payload = Object.fromEntries([...formData.entries()].filter(([key])=>key!=="image")) as Record<string,unknown>;
     const image=formData.get("image") as File|null;let imageData="";if(image?.size){const upload=new FormData();upload.set("file",image);upload.set("bucket","asset-images");const response=await fetch("/api/storage/upload",{method:"POST",body:upload}),result=await response.json() as {path?:string;signedUrl?:string;error?:string};if(!response.ok)throw new Error(result.error||"Image upload failed");payload.imagePath=result.path;imageData=result.signedUrl||"";}
     try {
-      const response = await fetch("/api/assets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch("/api/assets?images=0", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error("The asset database is still being prepared.");
       const data = await response.json() as { asset: AssetRecord };
       setAssets((current) => [...current, {...data.asset,imageData}]);
@@ -43,7 +49,7 @@ export default function AssetsPage() {
   }
 
   return <main className="dashboard-main section-page">
-    <section className="page-heading"><div><p className="eyebrow">Asset registry</p><h1>Equipment & Asset Passports</h1><p className="page-subtitle">Every machine, document, warranty and maintenance record in one place.</p></div><button className="button primary" type="button" onClick={() => setRegisterOpen(true)}><Plus size={18}/> Register asset</button></section>
+    <section className="page-heading"><div><p className="eyebrow">Asset registry</p><h1>Equipment & Asset Passports</h1><p className="page-subtitle">Every machine, document, warranty and maintenance record in one place.</p></div><div className="heading-actions">{user?.role==="ADMIN"&&<Link className="button secondary" href="/assets/archived">Archived assets</Link>}<button className="button primary" type="button" onClick={() => setRegisterOpen(true)}><Plus size={18}/> Register asset</button></div></section>
 
     <section className="toolbar-card">
       <label className="page-search"><Search size={18}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search by name, ID, serial or category"/></label>
@@ -57,13 +63,14 @@ export default function AssetsPage() {
     </section>
 
     <section className="registry-grid">
-      {filtered.map((asset) => { const Icon = iconMap[asset.category as keyof typeof iconMap] ?? Box; return <Link className="registry-card" href={`/assets/${asset.id}`} key={asset.id}>
+      {visibleAssets.map((asset) => { const Icon = iconMap[asset.category as keyof typeof iconMap] ?? Box; return <Link className="registry-card" href={`/assets/${asset.id}`} key={asset.id}>
         <div className={`registry-visual ${asset.tone}`}>{asset.imageData?<img src={asset.imageData} alt={asset.name}/>:<Icon size={42} strokeWidth={1.4}/>}<span className={`status-dot ${asset.tone}`}/></div>
         <div className="registry-main"><span className="asset-category">{asset.category}</span><h2>{asset.name}</h2><p>{asset.location}</p><div className="registry-meta"><span><small>Asset ID</small><strong>{asset.id}</strong></span><span><small>Model</small><strong>{asset.model}</strong></span></div></div>
         <div className="registry-health"><strong>{asset.health}%</strong><span>Health</span><div><i className={asset.tone} style={{width:`${asset.health}%`}}/></div><em className={asset.tone}>{asset.status}</em></div>
       </Link>})}
       {!filtered.length && <div className="empty-state"><Box size={34}/><h2>No matching assets</h2><p>Try another search or status filter.</p></div>}
     </section>
+    <footer className="audit-pagination assets-pagination"><span>{filtered.length?`Showing ${(page-1)*pageSize+1}–${Math.min(page*pageSize,filtered.length)} of ${filtered.length}`:"No assets"}</span><div><button className="button secondary" type="button" disabled={page<=1} onClick={()=>setPage(value=>Math.max(1,value-1))}><ChevronLeft size={16}/> Previous</button><strong>Page {page} of {totalPages}</strong><button className="button secondary" type="button" disabled={page>=totalPages} onClick={()=>setPage(value=>Math.min(totalPages,value+1))}>Next <ChevronRight size={16}/></button></div></footer>
 
     {registerOpen && <div className="modal-layer drawer-layer" role="dialog" aria-modal="true" aria-labelledby="register-title"><button className="modal-backdrop" type="button" onClick={()=>setRegisterOpen(false)} aria-label="Close registration form"/><section className="issue-drawer"><div className="drawer-header"><div><p className="eyebrow">Asset onboarding</p><h2 id="register-title">Register new equipment</h2></div><button className="modal-close inline" type="button" onClick={()=>setRegisterOpen(false)} aria-label="Close"><X size={20}/></button></div><form action={registerAsset}>
       <div className="form-grid"><label>Asset name<input name="name" required placeholder="e.g. Bambu Lab printer"/></label><label>Category<select name="category" required><option>FDM 3D Printer</option><option>CNC Router</option><option>RF CO₂ Laser Engraver</option><option>Laser Cutter</option><option>Technical Furniture</option><option>Other Equipment</option></select></label></div>
@@ -78,4 +85,3 @@ export default function AssetsPage() {
     </form></section></div>}
   </main>;
 }
-

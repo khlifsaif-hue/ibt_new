@@ -1,0 +1,120 @@
+/* Mobile chart geometry lives in a late-loaded stylesheet so it reliably
+   overrides the dashboard's desktop grid and chart dimensions. */
+@media (max-width: 1050px) {
+  .overview-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-chart-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 820px) {
+  .overview-charts {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .overview-chart-card,
+  .overview-chart-card:last-child {
+    grid-column: auto;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .overview-chart-card .panel-heading {
+    margin-bottom: 12px;
+  }
+
+  .overview-chart-card .panel-heading h2 {
+    font-size: 16px;
+  }
+
+  .overview-chart-card .panel-heading small {
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .overview-chart-card .chart-content {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+    gap: 18px;
+    min-height: 104px;
+  }
+
+  .overview-chart-card .donut-chart {
+    width: 104px;
+    height: 104px;
+    overflow: hidden;
+  }
+
+  .overview-chart-card .donut-chart svg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .overview-chart-card .donut-chart > div {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .overview-chart-card .donut-chart::after {
+    inset: 19px;
+  }
+
+  .overview-chart-card .donut-track,
+  .overview-chart-card .donut-segment {
+    stroke-width: 18;
+  }
+
+  .overview-chart-card .donut-chart strong {
+    font-size: 19px;
+  }
+
+  .overview-chart-card .donut-chart span {
+    margin-top: 3px;
+    font-size: 8px;
+  }
+
+  .overview-chart-card .chart-legend {
+    gap: 5px;
+  }
+
+  .overview-chart-card .chart-legend > button {
+    min-height: 30px;
+    font-size: 10px;
+  }
+
+  .overview-chart-card .chart-legend > button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .overview-chart-card .chart-legend > button strong {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .overview-chart-card .chart-content {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .overview-chart-card .donut-chart {
+    width: 92px;
+    height: 92px;
+  }
+
+  .overview-chart-card .donut-chart::after {
+    inset: 17px;
+  }
+}

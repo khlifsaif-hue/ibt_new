@@ -11,5 +11,6 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL(destination, url.origin));
   }
-  return NextResponse.redirect(new URL(`/auth/reset-password?error=invalid_or_expired_link`, url.origin));
+  const errorDestination = destination === "/auth/invite" ? "/auth/invite" : "/auth/reset-password";
+  return NextResponse.redirect(new URL(`${errorDestination}?error=invalid_or_expired_link`, url.origin));
 }

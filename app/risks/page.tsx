@@ -69,7 +69,7 @@ export default function RisksPage() {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return risks.filter((risk) =>
-      (!severity || risk.severity === severity) &&
+      (!severity || (severity === "high-critical" ? ["high","critical"].includes(risk.severity) : risk.severity === severity)) &&
       (!status || risk.status === status) &&
       (!term || `${risk.title} ${risk.description} ${risk.ownerName}`.toLowerCase().includes(term)),
     );
@@ -139,15 +139,15 @@ export default function RisksPage() {
 
       <section className="trackable-filterbar">
         <label>Project<select value={projectId} onChange={(event) => setProjectId(event.target.value)}>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-        <label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value)}><option value="">All</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+        <label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value)}><option value="">All</option><option value="low">Low</option><option value="medium">Medium</option><option value="high-critical">High / Critical</option><option value="high">High</option><option value="critical">Critical</option></select></label>
         <label>Status<select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All</option><option value="open">Open</option><option value="mitigated">Mitigated</option><option value="closed">Closed</option></select></label>
         <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Title, details or owner"/></label>
       </section>
 
       <section className="trackable-summary">
-        <Summary icon={<Flag/>} value={visible.filter((risk) => risk.status === "open").length} label="Open risks" tone="warning"/>
-        <Summary icon={<ShieldAlert/>} value={visible.filter((risk) => ["high", "critical"].includes(risk.severity) && risk.status === "open").length} label="High / critical" tone="danger"/>
-        <Summary icon={<AlertTriangle/>} value={visible.filter((risk) => risk.status === "mitigated").length} label="Mitigated" tone="healthy"/>
+        <Summary icon={<Flag/>} value={visible.filter((risk) => risk.status === "open").length} label="Open risks" tone="warning" onClick={()=>{setStatus("open");setSeverity("")}}/>
+        <Summary icon={<ShieldAlert/>} value={visible.filter((risk) => ["high", "critical"].includes(risk.severity) && risk.status === "open").length} label="High / critical" tone="danger" onClick={()=>{setStatus("open");setSeverity("high-critical")}}/>
+        <Summary icon={<AlertTriangle/>} value={visible.filter((risk) => risk.status === "mitigated").length} label="Mitigated" tone="healthy" onClick={()=>{setStatus("mitigated");setSeverity("")}}/>
       </section>
 
       <article className="risk-register">
@@ -172,10 +172,10 @@ export default function RisksPage() {
   );
 }
 
-function Summary({ icon, value, label, tone }: { icon: React.ReactNode; value: number; label: string; tone: string }) {
-  return <article className={`summary-chip ${tone}`}><span>{icon}</span><div><strong>{value}</strong><small>{label}</small></div></article>;
+function Summary({ icon, value, label, tone, onClick }: { icon: React.ReactNode; value: number; label: string; tone: string; onClick?:()=>void }) {
+  return <button type="button" className={`summary-chip summary-card-button ${tone}`} onClick={onClick}><span>{icon}</span><div><strong>{value}</strong><small>{label}</small></div></button>;
 }
 
 function RiskModal({ title, users, risk, close, submit }: { title: string; users: Person[]; risk?: Risk; close: () => void; submit: (formData: FormData) => Promise<void> }) {
-  return <div className="modal-layer"><button className="modal-backdrop" onClick={close} aria-label="Close"/><section className="modal-card activity-modal"><button className="modal-close" onClick={close} aria-label="Close"><X size={19}/></button><p className="eyebrow">Risk control</p><h2>{title}</h2><form action={submit}><label>Title<input name="title" defaultValue={risk?.title} required/></label><label>Description<textarea name="description" defaultValue={risk?.description} rows={4}/></label><div className="form-grid"><label>Severity<select name="severity" defaultValue={risk?.severity || "medium"}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>{risk && <label>Status<select name="status" defaultValue={risk.status}><option value="open">Open</option><option value="mitigated">Mitigated</option><option value="closed">Closed</option></select></label>}</div><div className="form-grid"><label>Owner<select name="ownerId" defaultValue={risk?.ownerId || ""}><option value="">Unassigned</option>{users.filter((user) => !user.id.startsWith("group:")).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label><label>Due date<input name="dueDate" type="date" defaultValue={risk?.dueDate || ""}/></label></div><button className="button primary full">{title}</button></form></section></div>;
+  return <div className="modal-layer"><button className="modal-backdrop" onClick={close} aria-label="Close"/><section className="modal-card activity-modal"><button className="modal-close" onClick={close} aria-label="Close"><X size={19}/></button><p className="eyebrow">Risk control</p><h2>{title}</h2><form action={submit}><label>Title<input name="title" defaultValue={risk?.title} required/></label><label>Description<textarea name="description" defaultValue={risk?.description} rows={4}/></label><div className="form-grid"><label>Severity<select name="severity" defaultValue={risk?.severity || "medium"}><option value="low">Low</option><option value="medium">Medium</option><option value="high-critical">High / Critical</option><option value="high">High</option><option value="critical">Critical</option></select></label>{risk && <label>Status<select name="status" defaultValue={risk.status}><option value="open">Open</option><option value="mitigated">Mitigated</option><option value="closed">Closed</option></select></label>}</div><div className="form-grid"><label>Owner<select name="ownerId" defaultValue={risk?.ownerId || ""}><option value="">Unassigned</option>{users.filter((user) => !user.id.startsWith("group:")).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label><label>Due date<input name="dueDate" type="date" defaultValue={risk?.dueDate || ""}/></label></div><button className="button primary full">{title}</button></form></section></div>;
 }

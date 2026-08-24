@@ -6,8 +6,10 @@ export async function GET(request:Request){
     const actor=await getSmartCareActor();
     if(!actor)return Response.json({error:"Unauthorized"},{status:401});
     if(!await hasSmartCarePermission(request,"users","view"))return Response.json({error:"User-management access required"},{status:403});
+    const compact=new URL(request.url).searchParams.get("compact")==="1";
+    if(compact)return Response.json({users:await listUsers()},{headers:{"Cache-Control":"private, max-age=30"}});
     const[users,roles,projects]=await Promise.all([listUsers(),listRoleNames(),listProjects()]);
-    return Response.json({users,roles,projects:projects.map(({id,name})=>({id,name}))});
+    return Response.json({users,roles,projects:projects.map(({id,name})=>({id,name})),actorRole:actor.role});
   }catch(error){return Response.json({error:error instanceof Error?error.message:"Unable to load user management data"},{status:500})}
 }
 
@@ -20,7 +22,7 @@ export async function POST(request:Request){
     const roles=await listRoleNames();
     if(!roles.includes(role)||!USER_ROLES.includes(role as (typeof USER_ROLES)[number]))return Response.json({error:"Invalid role"},{status:400});
     const projectIds=Array.isArray(body.projectIds)?body.projectIds.map(String):[];
-    const user=await createUser({name,email,role:role as (typeof USER_ROLES)[number],department:String(body.department||""),jobTitle:String(body.jobTitle||""),phone:String(body.phone||""),active:body.active!==false,projectIds});
+    const user=await createUser({name,email,role:role as (typeof USER_ROLES)[number],department:String(body.department||""),jobTitle:String(body.jobTitle||""),phone:String(body.phone||""),active:body.active!==false,projectIds},new URL(request.url).origin);
     return Response.json({user},{status:201});
   }catch(error){return Response.json({error:error instanceof Error?error.message:"Unable to create user"},{status:400})}
 }

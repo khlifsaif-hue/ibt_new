@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
+import { PasswordInput } from "../../components/password-input";
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -49,8 +50,7 @@ export default function ResetPasswordForm() {
         <form onSubmit={save}>
           <label>
             New password
-            <input
-              type="password"
+            <PasswordInput
               minLength={8}
               required
               autoComplete="new-password"
@@ -60,8 +60,7 @@ export default function ResetPasswordForm() {
           </label>
           <label>
             Confirm password
-            <input
-              type="password"
+            <PasswordInput
               minLength={8}
               required
               autoComplete="new-password"

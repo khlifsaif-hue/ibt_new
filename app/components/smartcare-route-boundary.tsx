@@ -5,14 +5,14 @@ import { AppShell } from "./app-shell";
 import { AuthGate, SmartCareAuthProvider } from "./auth-provider";
 
 /**
- * Password recovery begins before the user has an active SmartCare profile.
- * Keep this route outside AuthGate so a recovery session can display its two
- * password fields instead of being redirected back to the sign-in screen.
+ * Password recovery and first-time invitation setup begin before the user enters
+ * the normal SmartCare shell. Keep these routes outside AuthGate so their
+ * secure Supabase sessions can display password setup directly.
  */
 export function SmartCareRouteBoundary({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/auth/reset-password") {
+  if (pathname === "/auth/reset-password" || pathname === "/auth/invite") {
     return <>{children}</>;
   }
 

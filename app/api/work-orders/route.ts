@@ -1,12 +1,10 @@
-import { createWorkOrder, findAsset, isPlatformAdministrator, listAssets, listProjectsForUser, listWorkOrders } from "../../lib/database";
+import { createWorkOrder, findAsset, listWorkOrders } from "../../lib/database";
 import { getSmartCareActor, hasProjectPermission, hasSmartCarePermission } from "../../lib/auth-server";
 
 export async function GET() {
   try {
     const actor=await getSmartCareActor();if(!actor)return Response.json({error:"Unauthorized"},{status:401});
-    const allowed=new Set((await listProjectsForUser(actor)).map(p=>String((p as {name:string}).name)));
-    const assets=await listAssets();const assetIds=new Set((isPlatformAdministrator(actor.role)?assets:assets.filter(a=>allowed.has(a.project))).map(a=>a.id));
-    const orders=await listWorkOrders() as {assetId:string}[];return Response.json({ workOrders: orders.filter(order=>assetIds.has(order.assetId)) });
+    return Response.json({workOrders:await listWorkOrders()});
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load work orders" }, { status: 500 });
   }

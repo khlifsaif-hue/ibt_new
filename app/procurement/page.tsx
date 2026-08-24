@@ -13,7 +13,7 @@ const addMonths=(date:string,months:number)=>{const d=new Date(`${date}T12:00:00
 export default function ProcurementPage(){
  const{user,can}=useSmartCareAuth();
  const[orders,setOrders]=useState<PO[]>([]),[projects,setProjects]=useState<Project[]>([]),[created,setCreated]=useState<PO|null>(null),[editing,setEditing]=useState<PO|null>(null),[receiving,setReceiving]=useState<PO|null>(null),[status,setStatus]=useState("all"),[project,setProject]=useState("all"),[supplier,setSupplier]=useState("all"),[format,setFormat]=useState<ReportFormat>("pdf"),[error,setError]=useState(""),[message,setMessage]=useState("");
- async function refresh(){const[o,p]=await Promise.all([fetch("/api/purchase-orders",{cache:"no-store"}),fetch("/api/projects",{cache:"no-store"})]),[od,pd]=await Promise.all([o.json(),p.json()]);setOrders(od.orders||[]);setProjects(pd.projects||[])}
+ async function refresh(){const[o,p]=await Promise.all([fetch("/api/purchase-orders",{cache:"no-store"}),fetch("/api/projects?compact=1")]),[od,pd]=await Promise.all([o.json(),p.json()]);setOrders(od.orders||[]);setProjects(pd.projects||[])}
  useEffect(()=>{refresh().catch(()=>setError("Unable to load procurement data."))},[]);
  useEffect(()=>{const id=new URLSearchParams(window.location.search).get("open"),order=orders.find(item=>item.id===id);if(order)setCreated(order)},[orders]);
  const suppliers=useMemo(()=>Array.from(new Set(orders.map(o=>o.supplier))).sort(),[orders]),rows=useMemo(()=>orders.filter(o=>(status==="all"||o.status===status)&&(project==="all"||o.project===project)&&(supplier==="all"||o.supplier===supplier)),[orders,status,project,supplier]);

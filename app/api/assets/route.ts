@@ -1,13 +1,12 @@
-import { createAsset, isPlatformAdministrator, listAssets, listProjectsForUser } from "../../lib/database";
+import { createAsset, listAssets } from "../../lib/database";
 import { getSmartCareActor, hasProjectPermission, hasSmartCarePermission } from "../../lib/auth-server";
 
-export async function GET() {
+export async function GET(request:Request) {
   try {
     const actor=await getSmartCareActor();
     if(!actor)return Response.json({error:"Unauthorized"},{status:401});
-    const projects=(await listProjectsForUser(actor)).map(p=>String((p as {name:string}).name));
-    const assets=await listAssets();
-    return Response.json({ assets: isPlatformAdministrator(actor.role)?assets:assets.filter(asset=>projects.includes(asset.project)) });
+    const assets=await listAssets(new URL(request.url).searchParams.get("images")!=="0");
+    return Response.json({assets});
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load assets" }, { status: 500 });
   }

@@ -1,9 +1,9 @@
-import { createWorkOrder, findAsset, isPlatformAdministrator, listAssets, listMaintenanceTasks, listProjectsForUser } from "../../lib/database";
+import { createWorkOrder, findAsset, listMaintenanceTasks } from "../../lib/database";
 import { getSmartCareActor, hasProjectPermission, hasSmartCarePermission } from "../../lib/auth-server";
 
 export async function GET() {
   try {
-    const actor=await getSmartCareActor();if(!actor)return Response.json({error:"Unauthorized"},{status:401});const allowed=new Set((await listProjectsForUser(actor)).map(p=>String((p as {name:string}).name)));const assets=await listAssets();const assetIds=new Set((isPlatformAdministrator(actor.role)?assets:assets.filter(a=>allowed.has(a.project))).map(a=>a.id));const tasks=await listMaintenanceTasks() as {assetId:string}[];return Response.json({ maintenanceTasks: tasks.filter(task=>assetIds.has(String(task.assetId)))});
+    const actor=await getSmartCareActor();if(!actor)return Response.json({error:"Unauthorized"},{status:401});return Response.json({maintenanceTasks:await listMaintenanceTasks()});
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unable to load maintenance" }, { status: 500 });
   }

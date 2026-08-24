@@ -10,7 +10,9 @@ export async function getSmartCareActor(_request?: Request) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return undefined;
-  return findUserById(data.user.id);
+  const actor = await findUserById(data.user.id);
+  if (!actor?.active) return undefined;
+  return actor;
 }
 
 export async function hasSmartCarePermission(request: Request, moduleKey: string, action: ModuleAction) {
