@@ -6,7 +6,7 @@ import "./ui-polish.css";
 import { SmartCareRouteBoundary } from "./components/smartcare-route-boundary";
 
 export const metadata: Metadata = {
-  title: "Ibtechar SmartCare V3_02",
+  title: "Ibtechar SmartCare V5_01_31826",
   description: "AI-powered technical maintenance and asset management.",
   other: {
     "codex-preview": "development",

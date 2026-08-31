@@ -1,32 +1,14 @@
 "use client";
-
 import * as XLSX from "xlsx";
-
+import {IBTECHAR_DOCUMENT_THEME,documentStyles} from "./document-branding";
 export type ReportFormat="pdf"|"xlsx"|"csv"|"html";
 export type ReportMeta={project?:string;projectImage?:string;details?:Record<string,string|number>;filters?:Record<string,string>};
 export type ReportColumn={key:string;label:string};
-
 const stamp=()=>new Date().toLocaleString("en-QA",{dateStyle:"medium",timeStyle:"medium"});
 const safe=(value:unknown)=>value===null||value===undefined?"":String(value);
+const esc=(value:unknown)=>safe(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]||char));
 const slug=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 function download(blob:Blob,name:string){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
-function metadata(title:string,meta:ReportMeta){return [[title],["Generated",stamp()],["Project",meta.project||"All projects"],...Object.entries(meta.details||{}).map(([k,v])=>[k,safe(v)]),...Object.entries(meta.filters||{}).map(([k,v])=>[`Filter: ${k}`,v])];}
-
-export async function exportReport(args:{title:string;columns:ReportColumn[];rows:Record<string,unknown>[];format:ReportFormat;meta?:ReportMeta}){
-  const {title,columns,rows,format}=args,meta=args.meta||{},filename=`${slug(title)||"smartcare-report"}-${new Date().toISOString().slice(0,10)}`;
-  const body=rows.map(row=>columns.map(c=>safe(row[c.key]))),heads=columns.map(c=>c.label),info=metadata(title,meta);
-  if(format==="xlsx"){
-    const aoa=[...info,["Project picture reference",meta.projectImage?"Stored with project in SmartCare":"Not provided"],[],heads,...body];
-    const ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=heads.map((h,i)=>({wch:Math.min(42,Math.max(h.length+3,...body.map(r=>safe(r[i]).length+2)))}));
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"SmartCare Report");XLSX.writeFile(wb,`${filename}.xlsx`);return;
-  }
-  if(format==="csv"){
-    const csv=[...info,["Project picture",meta.projectImage?"Stored in SmartCare project record":"Not provided"],[],heads,...body].map(row=>row.map(v=>`"${safe(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(new Blob([csv],{type:"text/csv;charset=utf-8"}),`${filename}.csv`);return;
-  }
-  const image=meta.projectImage?`<img src="${meta.projectImage}" alt="Project" style="width:120px;height:80px;object-fit:cover;border-radius:8px">`:"";
-  const detailHtml=info.slice(1).map(([k,v])=>`<div><b>${k}</b><span>${v||""}</span></div>`).join("");
-  const table=`<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${body.map(row=>`<tr>${row.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial,sans-serif;color:#18334f;padding:32px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #0050C2;padding-bottom:18px}h1{color:#003167;margin:0}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}.meta div{padding:9px;background:#f4f7fa}.meta b,.meta span{display:block;font-size:11px}.meta span{margin-top:4px;color:#61748a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#0050C2;color:white;text-align:left;padding:9px}td{padding:8px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#EEEEEE}</style></head><body><header><div><small>IBTECHAR SMARTCARE</small><h1>${title}</h1></div>${image}</header><section class="meta">${detailHtml}</section>${table}</body></html>`;
-  if(format==="html"){download(new Blob([html],{type:"text/html;charset=utf-8"}),`${filename}.html`);return;}
-  const popup=window.open("","_blank","width=1100,height=800");if(!popup)throw new Error("Allow pop-ups to export PDF");popup.document.write(html);popup.document.close();popup.focus();setTimeout(()=>popup.print(),250);
-}
+function metadata(title:string,meta:ReportMeta){return [[title],["Generated",stamp()],["Organization",IBTECHAR_DOCUMENT_THEME.companyName],["Project",meta.project||"All projects"],...Object.entries(meta.details||{}).map(([key,value])=>[key,safe(value)]),...Object.entries(meta.filters||{}).map(([key,value])=>[`Filter: ${key}`,value])];}
+function reportHtml(title:string,heads:string[],body:string[][],meta:ReportMeta){const info=metadata(title,meta);return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${documentStyles()}.report-title{margin:8mm 0 2mm;color:var(--ibtechar-primary-dark);font-size:22px}.report-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:6mm 0}.report-meta .field{display:block;padding:3mm;background:var(--ibtechar-surface-muted)}.report-meta span,.report-meta strong{display:block}.report-meta span{font-size:8px;color:var(--ibtechar-text-muted)}.report-meta strong{margin-top:3px;font-size:9px}</style></head><body><main class="document-page"><header class="document-header"><img class="brand-logo" src="${IBTECHAR_DOCUMENT_THEME.logoPath}" alt="Ibtechar Digital Solutions"><div class="document-heading"><small>${IBTECHAR_DOCUMENT_THEME.companyName.toUpperCase()}</small><h1>CONTROLLED REPORT</h1><time>${esc(stamp())}</time></div></header><h2 class="report-title">${esc(title)}</h2><section class="report-meta">${info.slice(1).map(([key,value])=>`<div class="field"><span>${esc(key)}</span><strong>${esc(value)}</strong></div>`).join("")}</section><table class="document-table"><thead><tr>${heads.map(head=>`<th>${esc(head)}</th>`).join("")}</tr></thead><tbody>${body.map(row=>`<tr>${row.map(value=>`<td>${esc(value)}</td>`).join("")}</tr>`).join("")}</tbody></table><footer class="document-footer"><span>${IBTECHAR_DOCUMENT_THEME.companyName} · SmartCare controlled report</span><span>${body.length} records</span></footer></main></body></html>`}
+export async function exportReport(args:{title:string;columns:ReportColumn[];rows:Record<string,unknown>[];format:ReportFormat;meta?:ReportMeta}){const{title,columns,rows,format}=args,meta=args.meta||{},filename=`${slug(title)||"ibtechar-report"}-${new Date().toISOString().slice(0,10)}`,body=rows.map(row=>columns.map(column=>safe(row[column.key]))),heads=columns.map(column=>column.label),info=metadata(title,meta);if(format==="xlsx"){const ws=XLSX.utils.aoa_to_sheet([...info,[],heads,...body]);ws["!cols"]=heads.map((head,index)=>({wch:Math.min(48,Math.max(head.length+3,...body.map(row=>safe(row[index]).length+2)))}));const wb=XLSX.utils.book_new();wb.Props={Title:title,Company:IBTECHAR_DOCUMENT_THEME.companyName,Author:IBTECHAR_DOCUMENT_THEME.companyName};XLSX.utils.book_append_sheet(wb,ws,"Ibtechar Report");XLSX.writeFile(wb,`${filename}.xlsx`);return}if(format==="csv"){const csv=[...info,[],heads,...body].map(row=>row.map(value=>`"${safe(value).replace(/"/g,'""')}"`).join(",")).join("\n");download(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}),`${filename}.csv`);return}const html=reportHtml(title,heads,body,meta);if(format==="html"){download(new Blob([html],{type:"text/html;charset=utf-8"}),`${filename}.html`);return}const popup=window.open("","_blank","width=1100,height=850");if(!popup)throw new Error("Allow pop-ups to export PDF");popup.document.write(html);popup.document.close();popup.focus();setTimeout(()=>popup.print(),300)}

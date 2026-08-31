@@ -1,11 +1,12 @@
 "use client";
 
-import { CalendarClock, ChevronRight, Clock3, PackageCheck, RefreshCw, Truck, X } from "lucide-react";
+import { CalendarClock, ChevronRight, Clock3, ExternalLink, PackageCheck, RefreshCw, Search, Truck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { OrderProgressRecord } from "../lib/database";
 
 const statuses = ["Purchase Request Created", "Under Review", "Approved", "Rejected", "PO Pending", "PO Issued", "Supplier Confirmed", "In Preparation", "In Production", "Ready for Shipment", "Shipped", "In Transit", "Customs Clearance", "Local Delivery", "Partially Delivered", "Delivered", "Received", "Delayed", "On Hold", "Cancelled", "Issue / Problem"];
 const activeStatuses = new Set(statuses.filter(status => !["Rejected", "Cancelled", "Received", "Delivered"].includes(status)));
+type TrackingResult = { number: string; carrier: string; transport: string; logoUrl: string; status: string; detail: string; checkpoint: string; trackingUrl: string; live: boolean };
 
 export default function OrderProgressPage() {
   const [items, setItems] = useState<OrderProgressRecord[]>([]);
@@ -15,6 +16,9 @@ export default function OrderProgressPage() {
   const [summaryFilter, setSummaryFilter] = useState("all");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [tracking, setTracking] = useState<TrackingResult | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   async function refresh() { const response = await fetch("/api/order-progress", { cache: "no-store" }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Unable to load Order Progress"); setItems(data.items || []); }
   useEffect(() => { refresh().catch(error => setMessage(error.message)); }, []);
@@ -29,6 +33,16 @@ export default function OrderProgressPage() {
   const average = active.length ? Math.round(active.reduce((sum, item) => sum + item.progressPercentage, 0) / active.length) : 0;
   const count = (predicate: (item: OrderProgressRecord) => boolean) => items.filter(predicate).length;
 
+  async function lookupTracking() {
+    setTrackingLoading(true); setMessage("");
+    try {
+      const response = await fetch("/api/order-progress/tracking", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ number: trackingNumber }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to look up tracking number");
+      setTracking(data.tracking);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to look up tracking number"); } finally { setTrackingLoading(false); }
+  }
+
   async function saveProgress(formData: FormData) {
     if (!selected) return;
     setSaving(true); setMessage("");
@@ -42,6 +56,7 @@ export default function OrderProgressPage() {
   return <main className="dashboard-main section-page order-progress-page">
     <section className="page-heading"><div><p className="eyebrow">Procurement visibility</p><h1>Order Progress</h1><p className="page-subtitle">Track every purchase request from approval through supplier preparation, shipping, receiving and asset registration.</p></div><button className="button secondary" type="button" onClick={() => refresh()}><RefreshCw size={16}/> Refresh</button></section>
     {message && <p className="form-error">{message}</p>}
+    <section className="tracking-panel"><div><p className="eyebrow">Shipment intelligence</p><h2>Track a shipment</h2><p>Enter a tracking number to identify the carrier and retrieve the latest available status.</p></div><div className="tracking-search"><input value={trackingNumber} onChange={event => { setTrackingNumber(event.target.value); setTracking(null); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); lookupTracking(); } }} placeholder="Tracking number" aria-label="Tracking number"/><button className="button primary" type="button" onClick={lookupTracking} disabled={trackingLoading || trackingNumber.trim().length < 4}><Search size={15}/>{trackingLoading ? "Checking..." : "Check shipment"}</button></div>{tracking && <div className={`tracking-result ${tracking.live ? "live" : "fallback"}`}><span className="carrier-logo">{tracking.logoUrl ? <img src={tracking.logoUrl} alt={`${tracking.carrier} logo`} onError={event => { event.currentTarget.style.display = "none"; }} /> : <Truck size={23}/>}</span><div><strong>{tracking.carrier}</strong><span>{tracking.transport} · {tracking.live ? "Live tracking" : "Carrier detected"}</span></div><b>{tracking.status}</b><small>{tracking.detail}{tracking.checkpoint ? ` · ${tracking.checkpoint}` : ""}</small><a className="text-button" href={tracking.trackingUrl} target="_blank" rel="noreferrer">Open carrier page <ExternalLink size={14}/></a></div>}</section>
     <section className="summary-strip order-progress-summary interactive-summary-strip"><button type="button" className={`summary-card-button ${summaryFilter==="active"?"selected":""}`} onClick={()=>{setSummaryFilter("active");setStatus("all")}}><span className="summary-icon blue"><PackageCheck size={20}/></span><div><strong>{active.length}</strong><small>Active items</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="approved"?"selected":""}`} onClick={()=>{setSummaryFilter("approved");setStatus("all")}}><span className="summary-icon teal"><Clock3 size={20}/></span><div><strong>{count(item => item.status === "Approved")}</strong><small>Approved</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="production"?"selected":""}`} onClick={()=>{setSummaryFilter("production");setStatus("all")}}><span className="summary-icon amber"><Clock3 size={20}/></span><div><strong>{count(item => ["In Preparation", "In Production"].includes(item.status))}</strong><small>Preparation / production</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="shipping"?"selected":""}`} onClick={()=>{setSummaryFilter("shipping");setStatus("all")}}><span className="summary-icon blue"><Truck size={20}/></span><div><strong>{count(item => ["Shipped", "In Transit"].includes(item.status))}</strong><small>Shipped / in transit</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="delayed"?"selected":""}`} onClick={()=>{setSummaryFilter("delayed");setStatus("all")}}><span className="summary-icon coral"><CalendarClock size={20}/></span><div><strong>{count(item => item.status === "Delayed")}</strong><small>Delayed</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="delivered"?"selected":""}`} onClick={()=>{setSummaryFilter("delivered");setStatus("all")}}><span className="summary-icon teal"><PackageCheck size={20}/></span><div><strong>{count(item => ["Delivered", "Received"].includes(item.status))}</strong><small>Delivered / received</small></div></button><button type="button" className={`summary-card-button ${summaryFilter==="active"?"selected":""}`} onClick={()=>{setSummaryFilter("active");setStatus("all")}} title="Show active items used in this average"><span className="summary-icon blue"><Clock3 size={20}/></span><div><strong>{average}%</strong><small>Average active progress</small></div></button></section>
     <section className="toolbar-card"><label className="page-search"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search item, PR, PO, project, supplier or requester"/></label><label className="filter-select"><select value={status} onChange={event => {setStatus(event.target.value);setSummaryFilter("all")}}><option value="all">All statuses</option>{statuses.map(value => <option key={value}>{value}</option>)}</select></label><span className="result-count">{filtered.length} items</span></section>
     <section className="budget-table-card"><div className="responsive-table"><table className="order-progress-table"><thead><tr><th>Item</th><th>Request / project</th><th>Supplier</th><th>Progress</th><th>Status</th><th>Expected delivery</th><th>Updated</th><th/></tr></thead><tbody>{filtered.map(item => <tr key={item.id} className={item.status === "Delayed" || item.status === "Issue / Problem" ? "priority-row" : ""}><td><strong>{item.itemName}</strong><small>Qty {item.quantity}</small></td><td><strong>{item.purchaseRequestId}</strong><small>{item.project} · {item.requestedByName || "Requester not recorded"}</small></td><td>{item.supplier || "Not confirmed"}<small>{item.purchaseOrderId || "PO pending"}</small></td><td><div className="order-progress-value"><strong>{item.progressPercentage}%</strong><div className="progress-track"><i style={{ width: `${item.progressPercentage}%` }}/></div></div></td><td><span className={`status-pill ${item.status === "Delayed" || item.status === "Issue / Problem" ? "warning" : item.status === "Received" ? "healthy" : "due"}`}><i/>{item.status}</span></td><td>{item.expectedDeliveryDate || "Not set"}</td><td><small>{new Date(item.updatedAt).toLocaleDateString()}</small><small>{item.updatedByName || "System"}</small></td><td><button className="text-button" type="button" onClick={() => setSelected(item)}>View / update <ChevronRight size={15}/></button></td></tr>)}</tbody></table></div>{!filtered.length && <p className="empty-row">No Order Progress items match these filters.</p>}</section>

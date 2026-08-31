@@ -6,6 +6,8 @@ DRAFT → FINANCE_REVIEW → CEO_REVIEW → APPROVED_FOR_PAYMENT → PAID.
 - Requester creates a draft against a main project or sub-project.
 - Submission uses the Universal Approval Engine.
 - Finance review and CEO final approval use granular V5.6 permissions.
+- After every Finance or CEO decision, the requester, Finance reviewers, CEO approvers, and prior decision-makers are notified (excluding the person who just acted).
+- CEO approval also notifies the payment-processing team that the request is ready to pay.
 - Finance can mark an approved payment as Paid with a required payment reference.
 - Project/sub-project financials refresh when payment status changes.
 - `APPROVED_FOR_PAYMENT` contributes to committed value.

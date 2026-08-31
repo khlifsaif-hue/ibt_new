@@ -190,7 +190,7 @@ export async function createUser(input: UserWriteInput, requestOrigin?: string) 
   const siteUrl = (requestOrigin || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
   const inviteCallback = siteUrl ? `${siteUrl}/auth/callback?next=/auth/invite` : undefined;
   const { data, error } = await admin.auth.admin.inviteUserByEmail(input.email, {
-    data: { full_name: input.name },
+    data: { full_name: input.name, first_login_required: true },
     ...(inviteCallback ? { redirectTo: inviteCallback } : {}),
   });
   fail(error); if (!data.user) throw new Error("Supabase did not create the invited user.");

@@ -71,7 +71,7 @@ export async function createInvoiceRequest(input:Record<string,unknown>,actor:Us
 export async function listCustomerInvoices(actor:UserRecord,projectId?:string){
   const supabase=await createClient();
   let query=supabase.from("customer_invoices")
-    .select("*,projects(name)")
+    .select("*,projects(name),customer_invoice_requests(contract_reference,milestone_reference,milestone_description,request_number)")
     .order("created_at",{ascending:false});
   if(projectId)query=query.eq("project_id",projectId);
   if(!await userCanFinance(actor,"view_all_finance")){
@@ -93,6 +93,10 @@ export async function listCustomerInvoices(actor:UserRecord,projectId?:string){
       projectId:String(row.project_id),
       projectName:Array.isArray(row.projects)?txt(row.projects[0]?.name):txt(row.projects?.name),
       customerName:txt(row.customer_name),invoiceNumber:txt(row.invoice_number),
+      contractReference:txt(Array.isArray(row.customer_invoice_requests)?row.customer_invoice_requests[0]?.contract_reference:row.customer_invoice_requests?.contract_reference),
+      milestoneReference:txt(Array.isArray(row.customer_invoice_requests)?row.customer_invoice_requests[0]?.milestone_reference:row.customer_invoice_requests?.milestone_reference),
+      milestoneDescription:txt(Array.isArray(row.customer_invoice_requests)?row.customer_invoice_requests[0]?.milestone_description:row.customer_invoice_requests?.milestone_description),
+      requestNumber:txt(Array.isArray(row.customer_invoice_requests)?row.customer_invoice_requests[0]?.request_number:row.customer_invoice_requests?.request_number),
       invoiceDate:row.invoice_date||null,dueDate:row.due_date||null,amount:num(row.amount),
       currency:txt(row.currency)||"QAR",status:effective,storedStatus:txt(row.status),
       sentAt:row.sent_at||null,receivedAmount:num(row.received_amount),receivedDate:row.received_date||null,
@@ -108,6 +112,7 @@ export async function issueCustomerInvoice(input:Record<string,unknown>,actor:Us
   const invoiceDate=txt(input.invoiceDate);
   const dueDate=txt(input.dueDate);
   if(!requestId||!invoiceNumber||!invoiceDate||!dueDate)throw new Error("Invoice request, invoice number, invoice date and due date are required");
+  if(dueDate<invoiceDate)throw new Error("Due date must be on or after the invoice date");
   const supabase=await createClient();
   const{data:req,error:reqError}=await supabase.from("customer_invoice_requests").select("*").eq("id",requestId).maybeSingle();
   fail(reqError);if(!req)throw new Error("Invoice request not found");

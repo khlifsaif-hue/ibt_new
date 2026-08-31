@@ -52,7 +52,10 @@ export default function InvitePasswordForm() {
 
     setState("saving");
     const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    // Keep the first-login requirement set after invitation activation. The
+    // invitation establishes the user's current password; their first normal
+    // SmartCare sign-in must still require them to replace it once.
+    const { error: updateError } = await supabase.auth.updateUser({ password, data: { first_login_required: true } });
     if (updateError) {
       setError(updateError.message);
       setState("ready");

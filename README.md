@@ -75,6 +75,7 @@ Required:
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SECRET_KEY` — server only; never prefix with `NEXT_PUBLIC_`
 - `OPENAI_API_KEY` — server only
+- `TRACKING_17TRACK_TOKEN` — server only; optional, enables live worldwide air, sea, courier and postal tracking with carrier logos
 
 Never commit `.env.local`.
 

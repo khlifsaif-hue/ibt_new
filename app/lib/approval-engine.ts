@@ -66,6 +66,20 @@ function notificationType(type:EntityType){return type.toLowerCase()}
 function requestLabel(type:EntityType){return type==="PAYMENT_REQUEST"?"Payment request":type==="BUDGET_REQUEST"?"Budget request":"Customer invoice request"}
 async function notifyPermission(type:EntityType,entityId:string,permission:FinancePermissionKey,title:string,message:string,excludeId?:string){const recipients=(await recipientsForFinancePermission(permission)).filter(id=>id!==excludeId);await insertNotifications(recipients,notificationType(type),entityId,title,message)}
 
+async function notifyPaymentDecisionParties(workflowId:string,entityId:string,submittedBy:string,actorId:string,title:string,message:string,includePaymentTeam=false){
+  const supabase=await createClient();
+  const [{data:steps,error},financeReviewers,ceoApprovers,paymentTeam]=await Promise.all([
+    supabase.from("approval_steps").select("decided_by").eq("workflow_id",workflowId).not("decided_by","is",null),
+    recipientsForFinancePermission("payment_review"),
+    recipientsForFinancePermission("payment_final_approve"),
+    includePaymentTeam?recipientsForFinancePermission("payment_mark_paid"):Promise.resolve([] as string[]),
+  ]);
+  fail(error);
+  const recipients=[submittedBy,...financeReviewers,...ceoApprovers,...paymentTeam,...(steps||[]).map(row=>String(row.decided_by||""))]
+    .filter(id=>id&&id!==actorId);
+  await insertNotifications(recipients,notificationType("PAYMENT_REQUEST"),entityId,title,message);
+}
+
 async function getEntity(type:EntityType,id:string) {
   const supabase=await createClient();
   const def=DEFINITIONS[type];
@@ -141,7 +155,10 @@ if (String(workflow.submitted_by) === actor.id && actor.role !== "ADMIN")
     fail((await supabase.from("approval_workflows").update({status:nextWorkflowStatus,current_step_order:null,completed_at:action==="REJECT"?new Date().toISOString():null}).eq("id",id)).error);
     fail((await supabase.from("approval_events").insert({workflow_id:id,step_id:step.id,actor_id:actor.id,action,from_status:"IN_PROGRESS",to_status:nextWorkflowStatus,comment:note})).error);
     await setEntityStatus(type,String(workflow.entity_id),nextEntityStatus);
-    await insertNotifications([String(workflow.submitted_by)],notificationType(type),String(workflow.entity_id),`${requestLabel(type)} ${action==="REJECT"?"rejected":"needs modification"}`,`${actor.name}: ${note}`);
+    const decisionTitle=`${requestLabel(type)} ${action==="REJECT"?"rejected":"needs modification"}`;
+    const decisionMessage=`${actor.name}: ${note}`;
+    if(type==="PAYMENT_REQUEST")await notifyPaymentDecisionParties(id,String(workflow.entity_id),String(workflow.submitted_by),actor.id,decisionTitle,decisionMessage);
+    else await insertNotifications([String(workflow.submitted_by)],notificationType(type),String(workflow.entity_id),decisionTitle,decisionMessage);
     return getApprovalWorkflow(id);
   }
 
@@ -154,13 +171,22 @@ if (String(workflow.submitted_by) === actor.id && actor.role !== "ADMIN")
     fail((await supabase.from("approval_workflows").update({current_step_order:nextOrder}).eq("id",id)).error);
     fail((await supabase.from("approval_events").insert({workflow_id:id,step_id:step.id,actor_id:actor.id,action:"APPROVE",from_status:"IN_PROGRESS",to_status:"IN_PROGRESS",comment:note})).error);
     await setEntityStatus(type,String(workflow.entity_id),String(nextStep.step_key)==="CEO_APPROVAL"?"CEO_REVIEW":def.reviewStatus);
-    await notifyPermission(type,String(workflow.entity_id),permissionForStep(type,String(nextStep.step_key)),`${requestLabel(type)} awaiting ${String(nextStep.title)}`,`${actor.name} approved the previous step. Your approval is now required.`,actor.id);
+    if(type==="PAYMENT_REQUEST")await notifyPaymentDecisionParties(
+      id,String(workflow.entity_id),String(workflow.submitted_by),actor.id,
+      "Payment request approved by Finance — CEO decision required",
+      `${actor.name} approved the Finance review. The request is now awaiting CEO final approval.`
+    );
+    else await notifyPermission(type,String(workflow.entity_id),permissionForStep(type,String(nextStep.step_key)),`${requestLabel(type)} awaiting ${String(nextStep.title)}`,`${actor.name} approved the previous step. Your approval is now required.`,actor.id);
   } else {
     fail((await supabase.from("approval_workflows").update({status:"APPROVED",current_step_order:null,completed_at:new Date().toISOString()}).eq("id",id)).error);
     fail((await supabase.from("approval_events").insert({workflow_id:id,step_id:step.id,actor_id:actor.id,action:"APPROVE",from_status:"IN_PROGRESS",to_status:"APPROVED",comment:note})).error);
     await setEntityStatus(type,String(workflow.entity_id),def.finalStatus);
-    await insertNotifications([String(workflow.submitted_by)],notificationType(type),String(workflow.entity_id),`${requestLabel(type)} approved`,`${actor.name} completed the final approval.`);
-    if(type==="PAYMENT_REQUEST")await notifyPermission(type,String(workflow.entity_id),"payment_mark_paid",`${requestLabel(type)} ready for payment`,`Final approval is complete. Record the payment when processed.`,actor.id);
+    if(type==="PAYMENT_REQUEST")await notifyPaymentDecisionParties(
+      id,String(workflow.entity_id),String(workflow.submitted_by),actor.id,
+      "Payment request approved by CEO — ready for payment",
+      `${actor.name} completed the CEO final approval. Finance can now record the payment when processed.`,true
+    );
+    else await insertNotifications([String(workflow.submitted_by)],notificationType(type),String(workflow.entity_id),`${requestLabel(type)} approved`,`${actor.name} completed the final approval.`);
     if(type==="CUSTOMER_INVOICE_REQUEST")await notifyPermission(type,String(workflow.entity_id),"invoice_issue",`${requestLabel(type)} ready to invoice`,`Finance review is complete. The customer invoice can now be issued.`,actor.id);
   }
   return getApprovalWorkflow(id);

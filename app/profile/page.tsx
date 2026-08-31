@@ -65,6 +65,6 @@ export default function ProfilePage() {
         {tab === "password" && <div className="profile-password-panel"><div className="profile-password-intro"><KeyRound size={28}/><div><h3>Change your password</h3><p>Enter your current password to confirm your identity, then choose a new password.</p></div></div><form onSubmit={changePassword}><label>Current password<PasswordInput autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)}/></label><label>New password<PasswordInput autoComplete="new-password" minLength={8} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)}/><small>Use at least 8 characters.</small></label><label>Confirm new password<PasswordInput autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}/></label>{passwordError && <p className="form-error">{passwordError}</p>}{passwordSuccess && <p className="form-success">{passwordSuccess}</p>}<button className="button primary" disabled={passwordSaving}>{passwordSaving ? "Changing password…" : "Change password"}</button></form></div>}
       </article>
     </section>
-    <footer className="profile-credit">Ibtechar SmartCare V3_02 · Developed by Seif Khlif</footer>
+    <footer className="profile-credit">Ibtechar SmartCare V5_01_31826 · Developed by Seif Khlif</footer>
   </main>;
 }
