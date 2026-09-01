@@ -10,10 +10,10 @@ export type ModuleAction = (typeof MODULE_ACTIONS)[number];
 
 export type UserRecord = {
   id: string; name: string; email: string; role: UserRole; department: string;
-  jobTitle: string; phone: string; active: boolean; projectIds: string[];
+  jobTitle: string; phone: string; address: string; avatarUrl: string; roleSummary: string; active: boolean; projectIds: string[];
   projectNames: string[]; createdAt: string; updatedAt: string;
 };
-export type UserWriteInput = Omit<UserRecord, "id" | "projectIds" | "projectNames" | "createdAt" | "updatedAt"> & { projectIds?: string[] };
+export type UserWriteInput = Omit<UserRecord, "id" | "address" | "avatarUrl" | "roleSummary" | "projectIds" | "projectNames" | "createdAt" | "updatedAt"> & { projectIds?: string[] };
 export type ModuleRecord = { key: string; title: string; path: string; enabled: boolean; sortOrder: number };
 export type UserPermissionRecord = { userId: string; moduleKey: string; canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean; canApprove: boolean };
 export type ProjectAccessRecord = { userId: string; projectId: string; projectName: string; canView: boolean; canCreate: boolean; canEdit: boolean; canApprove: boolean };
@@ -57,7 +57,7 @@ function userFromRow(row: Row): UserRecord {
   return {
     id: text(row.id), name: text(row.full_name), email: text(row.email),
     role: (relName(row.roles) || text(row.role) || "VIEWER") as UserRole,
-    department: text(row.department), jobTitle: text(row.job_title), phone: text(row.phone),
+    department: text(row.department), jobTitle: text(row.job_title), phone: text(row.phone), address:text(row.address), avatarUrl:text(row.avatar_url), roleSummary:text(row.role_summary),
     active: row.active !== false, projectIds: projects.projectIds, projectNames: projects.projectNames,
     createdAt: text(row.created_at), updatedAt: text(row.updated_at),
   };

@@ -49,3 +49,17 @@ export async function GET() {
     );
   }
 }
+
+export async function PATCH(request:Request){
+  const supabase=await createClient();
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError||!user)return Response.json({error:"Your sign-in session is missing or expired."},{status:401});
+  try{
+    const body=await request.json() as {phone?:string;address?:string;avatarUrl?:string};
+    const phone=String(body.phone||"").trim().slice(0,40),address=String(body.address||"").trim().slice(0,300),avatarUrl=String(body.avatarUrl||"").trim().slice(0,1000);
+    const admin=(await import("../../../lib/supabase/admin")).createAdminClient();
+    const {error}=await admin.from("profiles").update({phone,address,avatar_url:avatarUrl,updated_at:new Date().toISOString()}).eq("id",user.id);
+    if(error)throw error;
+    return Response.json({ok:true,phone,address,avatarUrl});
+  }catch(error){return Response.json({error:error instanceof Error?error.message:"Unable to update profile"},{status:500})}
+}

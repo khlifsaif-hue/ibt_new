@@ -170,6 +170,114 @@ textarea {
   max-width: 100%;
 }
 
+/* Report and diagnostic controls use the same print-ready visual language. */
+.report-page .heading-actions {
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.report-page .heading-actions > label {
+  min-height: 46px;
+  padding: 0 8px 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #cbd9e9;
+  border-radius: 11px;
+  color: #29445f;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.report-page .heading-actions > label select {
+  min-width: 92px;
+  min-height: 34px;
+  padding: 5px 30px 5px 10px;
+  border: 0;
+  border-left: 1px solid #e1e8f1;
+  border-radius: 0;
+  color: #14263a;
+  background-color: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  outline: 0;
+}
+
+.report-page .heading-actions > .button {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 11px;
+  font-size: 11px;
+}
+
+.report-page .heading-actions > .button.secondary {
+  color: #0758cc;
+  border: 1.5px solid #0758cc;
+  background: #fff;
+}
+
+.diagnostic-form-card > label,
+.diagnostic-form-card .form-grid > label {
+  gap: 7px;
+  color: #29445f;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.diagnostic-form-card input,
+.diagnostic-form-card select,
+.diagnostic-form-card textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid #cbd9e9;
+  border-radius: 11px;
+  color: #14263a;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.diagnostic-form-card textarea {
+  min-height: 118px;
+  resize: vertical;
+}
+
+.diagnostic-form-card input::placeholder,
+.diagnostic-form-card textarea::placeholder {
+  color: #7a8088;
+  opacity: 1;
+}
+
+.diagnostic-form-card input:focus,
+.diagnostic-form-card select:focus,
+.diagnostic-form-card textarea:focus {
+  border-color: #075fd5;
+  box-shadow: 0 0 0 3px rgba(7,95,213,.12);
+  background: #fff;
+}
+
+@media (max-width: 610px) {
+  .report-page .heading-actions > label,
+  .report-page .heading-actions > .button {
+    width: 100%;
+  }
+
+  .report-page .heading-actions > label select {
+    flex: 1;
+  }
+
+  .diagnostic-form-card input,
+  .diagnostic-form-card select,
+  .diagnostic-form-card textarea {
+    font-size: 16px;
+  }
+}
+
 .auth-card input,
 .activity-modal input,
 .activity-modal select,
