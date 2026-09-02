@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AlertTriangle, Bell, Box, ChevronDown, ClipboardList, Database, FileBarChart, HelpCircle, Home, Info,
+  AlertTriangle, Bell, Box, ChevronDown, ClipboardList, Database, FileBarChart, Handshake, HelpCircle, Home, Info,
   Landmark, LayoutDashboard, LogOut, Menu, Package, Pencil, RadioTower, ShieldCheck, ShoppingCart, Sparkles, Target, Trash2, Truck, Upload, UserCircle2, UsersRound, WalletCards, Wrench, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSmartCareAuth } from "./auth-provider";
 
-const iconByKey:Record<string,typeof Home>={overview:Home,assets:Box,projects:WalletCards,project_dashboard:LayoutDashboard,purchase_requests:ClipboardList,procurement:ShoppingCart,order_progress:Truck,inventory:Package,depreciation:Landmark,imports:Upload,maintenance:Wrench,work_orders:ClipboardList,ai_assistant:Sparkles,integrations:RadioTower,reports:FileBarChart,users:UsersRound,access_control:ShieldCheck,audit_logs:Database,project_tasks:Target,project_risks:AlertTriangle};
+const iconByKey:Record<string,typeof Home>={overview:Home,assets:Box,asset_loans:Handshake,projects:WalletCards,project_dashboard:LayoutDashboard,purchase_requests:ClipboardList,procurement:ShoppingCart,order_progress:Truck,inventory:Package,depreciation:Landmark,imports:Upload,maintenance:Wrench,work_orders:ClipboardList,ai_assistant:Sparkles,integrations:RadioTower,reports:FileBarChart,users:UsersRound,access_control:ShieldCheck,audit_logs:Database,project_tasks:Target,project_risks:AlertTriangle};
 const modulePath=(key:string,path:string)=>{
   const mapped:Record<string,string>={
     overview:"/",
@@ -28,7 +28,7 @@ const departmentByModule:Record<string,string>={
   purchase_requests:"Procurement & Supply Chain",procurement:"Procurement & Supply Chain",order_progress:"Procurement & Supply Chain",inventory:"Procurement & Supply Chain",
   assets:"Assets & Operations",locations:"Assets & Operations",maintenance:"Assets & Operations",work_orders:"Assets & Operations",depreciation:"Assets & Operations",
   finance_invoicing:"Finance",finance_payments:"Finance",project_budgets:"Finance",
-  ai_assistant:"Technology & Administration",integrations:"Technology & Administration",imports:"Technology & Administration",audit_logs:"Technology & Administration",
+  asset_loans:"Technology & Administration",ai_assistant:"Technology & Administration",integrations:"Technology & Administration",imports:"Technology & Administration",audit_logs:"Technology & Administration",
   users:"IT & Access Management",access_control:"IT & Access Management",
   about:"Help & Support",
 };
